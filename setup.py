@@ -8,4 +8,5 @@ setup(name='pyW215',
             author_email='christian@fredborg-braedstrup.dk',
             license='MIT',
             packages=['pyW215'],
+            install_requires=[],
             zip_safe=False)
