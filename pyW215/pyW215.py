@@ -1,8 +1,12 @@
 
 from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
 import xml.etree.ElementTree as ET
 import hmac
 import time
+import logging
+
+_LOGGER = logging.getLogger(__name__)
 
 class SmartPlug(object):
     """
@@ -32,9 +36,11 @@ class SmartPlug(object):
         :param password: Password to authenticate with the plug. Located on the plug.
         :param user: Username for the plug. Default is admin.
         """
+        self.ip = ip
         self.url = "http://{}/HNAP1/".format(ip)
         self.user = user
         self.password = password
+        self._error_report = False
 
     def moduleParameters(self, module):
         """Returns moduleID XML.
@@ -98,6 +104,9 @@ class SmartPlug(object):
         """
         # Authenticate client
         auth = self.auth()
+
+        if auth is None:
+            return None
         payload = self.requestBody(Action, params)
 
         # Timestamp in microseconds
@@ -111,16 +120,24 @@ class SmartPlug(object):
                    'HNAP_AUTH' : '{}'.format(AUTHKey),
                    'Cookie' : '"uid={}"'.format(auth[1])}
 
-        response = urlopen(Request(self.url, payload.encode(), headers))
+        try:
+            response = urlopen(Request(self.url, payload.encode(), headers))
+        except (HTTPError, URLError):
+            _LOGGER.warning("Failed to open url to {}".format(ip))
+            self._error_report = True
+            return None
+
         xmlData = response.read().decode()
         root = ET.fromstring(xmlData)
 
         # Get value from device
         value = root.find('.//{http://purenetworks.com/HNAP1/}%s' % (responseElement)).text
+        if value is None and self._error_report is False:
+            _LOGGER.warning("Could not find %s in response." % responseElement)
+            self._error_report = True
+            return None
 
-        if value is None:
-            raise Exception("Could not find %s in response." % responseElement)
-
+        self._error_report = False
         return value
 
     @property
@@ -128,10 +145,13 @@ class SmartPlug(object):
         """Get the current power consumption in Watt."""
         res = self.SOAPAction('GetCurrentPowerConsumption', 'CurrentConsumption', self.moduleParameters("2"))
 
+        if res is None:
+            return None
+
         try:
             float(res)
         except ValueError:
-            raise Exception("Failed to retrieve current power consumption from SmartPlug")
+            _LOGGER.error("Failed to retrieve current power consumption from SmartPlug")
         
         return res
     @property
@@ -139,10 +159,13 @@ class SmartPlug(object):
         """Get the total power consumpuntion in the device lifetime."""
         res = self.SOAPAction("GetPMWarningThreshold", "TotalConsumption", self.moduleParameters("2"))
 
+        if res is None:
+            return None
+
         try:
             float(res)
         except ValueError:
-            raise Exception("Failed to retrieve total power consumption from SmartPlug")
+            _LOGGER.error("Failed to retrieve total power consumption from SmartPlug")
 
         return res
 
@@ -155,12 +178,15 @@ class SmartPlug(object):
     def state(self):
         """Get the device state (i.e. ON or OFF)."""
         response =  self.SOAPAction('GetSocketSettings', 'OPStatus', self.moduleParameters("1"))
-        if response.lower() == 'true':
+        if response is None:
+            return 'unknown'
+        elif response.lower() == 'true':
             return "ON"
         elif response.lower() == 'false':
             return "OFF"
         else:
-            raise Exception("Unknown state %s returned" % str(response.lower))
+            _LOGGER.warning("Unknown state %s returned" % str(response.lower()))
+            return 'unknown'
 
     @state.setter
     def state(self, value):
@@ -198,7 +224,13 @@ class SmartPlug(object):
            'SOAPAction': '"http://purenetworks.com/HNAP1/Login"'}
 
         # Request privatekey, cookie and challenge
-        response = urlopen(Request(self.url, payload, headers))
+        try:
+            response = urlopen(Request(self.url, payload, headers))
+        except URLError:
+            if self._error_report is False:
+                _LOGGER.warning('Unable to open a connection to dlink switch {}'.format(self.ip))
+                self._error_report = True
+            return None
         xmlData = response.read().decode()
         root = ET.fromstring(xmlData)
 
@@ -207,8 +239,10 @@ class SmartPlug(object):
         Cookie = root.find('.//{http://purenetworks.com/HNAP1/}Cookie').text
         Publickey = root.find('.//{http://purenetworks.com/HNAP1/}PublicKey').text
 
-        if Challenge == None or Cookie == None or Publickey == None:
-            raise Exception("Failed to receive initial authentication from smartplug.")
+        if (Challenge == None or Cookie == None or Publickey == None) and self._error_report is False:
+            _LOGGER.warning("Failed to receive initial authentication from smartplug.")
+            self._error_report = True
+            return None
 
         # Generate hash responses
         PrivateKey = hmac.new((Publickey+self.password).encode(), (Challenge).encode()).hexdigest().upper()
@@ -226,10 +260,13 @@ class SmartPlug(object):
 
         # Find responses
         login_status = root.find('.//{http://purenetworks.com/HNAP1/}LoginResult').text.lower()
-        
-        if login_status != "success":
-            raise Exception("Failed to authenticate with SmartPlug")
-                    
+
+        if login_status != "success" and self._error_report is False:
+            _LOGGER.error("Failed to authenticate with SmartPlug {}".format(self.ip))
+            self._error_report = True
+            return None
+
+        self._error_report = False # Reset error logging
         return (PrivateKey, Cookie)
 
     def initial_auth_payload(self):
