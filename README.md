@@ -17,5 +17,6 @@ Note: You need to know the IP and password of you device. The password is writte
 
 # Working firmware versions
 * v2.02
+* v2.22
  
 If you have it working on other firmware versions please let me know.
