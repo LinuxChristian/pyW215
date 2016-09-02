@@ -18,5 +18,8 @@ Note: You need to know the IP and password of you device. The password is writte
 # Working firmware versions
 * v2.02
 * v2.22
- 
+
+## Partial support
+* v1.24 (State changing working, but fails to read temperature or current consumption)
+
 If you have it working on other firmware versions please let me know.
