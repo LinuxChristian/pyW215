@@ -22,7 +22,7 @@ class SmartPlug(object):
     # query and print current state of plug
     print(p.state)
 
-    Note: 
+    Note:
     The library is greatly inspired by the javascript library by @bikerp (https://github.com/bikerp).
     Class layout is inspired by @rkabadi (https://github.com/rkabadi) for the Edimax Smart plug.
     """
@@ -53,7 +53,7 @@ class SmartPlug(object):
 
     def controlParameters(self, module, status):
         """Returns control parameters as XML.
-        
+
         :type module: str
         :type status: str
         :param module: The module number/ID
@@ -65,7 +65,7 @@ class SmartPlug(object):
 
     def radioParameters(self, radio):
         """Returns RadioID as XML.
-        
+
         :type radio: str
         :param radio: Radio number/ID
         """
@@ -118,7 +118,7 @@ class SmartPlug(object):
         headers = {'Content-Type' : '"text/xml; charset=utf-8"',
                    'SOAPAction': '"http://purenetworks.com/HNAP1/{}"'.format(Action),
                    'HNAP_AUTH' : '{}'.format(AUTHKey),
-                   'Cookie' : '"uid={}"'.format(auth[1])}
+                   'Cookie' : 'uid={}'.format(auth[1])}
 
         try:
             response = urlopen(Request(self.url, payload.encode(), headers))
@@ -152,7 +152,7 @@ class SmartPlug(object):
             float(res)
         except ValueError:
             _LOGGER.error("Failed to retrieve current power consumption from SmartPlug")
-        
+
         return res
     @property
     def total_consumption(self):
@@ -210,7 +210,7 @@ class SmartPlug(object):
         of a publickey, a challenge string and a cookie.
         These values are then hashed by a MD5 algorithm producing a privatekey
         used for the header and a hashed password for the XML payload.
-        
+
         If everything is accepted the XML returned will contain a LoginResult tag with the
         string 'success'.
 
@@ -253,7 +253,7 @@ class SmartPlug(object):
         headers = {'Content-Type' : '"text/xml; charset=utf-8"',
            'SOAPAction': '"http://purenetworks.com/HNAP1/Login"',
            'HNAP_AUTH' : '"{}"'.format(PrivateKey),
-           'Cookie' : '"uid={}"'.format(Cookie)}
+           'Cookie' : 'uid={}'.format(Cookie)}
         response = urlopen(Request(self.url, response_payload, headers))
         xmlData = response.read().decode()
         root = ET.fromstring(xmlData)
@@ -284,7 +284,7 @@ class SmartPlug(object):
         </soap:Body>
         </soap:Envelope>
         '''
-    
+
     def auth_payload(self, login_pwd):
         """Generate a new payload containing generated hash information.
 
