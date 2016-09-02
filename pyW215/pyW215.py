@@ -61,7 +61,7 @@ class SmartPlug(object):
         :return XML string to join with payload
         """
         return '''{}<NickName>Socket 1</NickName><Description>Socket 1</Description>
-                  <OPStatus>{}</OPStatus>'''.format(self.moduleParameters(module), status)
+                  <OPStatus>{}</OPStatus><Controller>1</Controller>'''.format(self.moduleParameters(module), status)
 
     def radioParameters(self, radio):
         """Returns RadioID as XML.
