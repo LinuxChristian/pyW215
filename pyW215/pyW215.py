@@ -123,7 +123,7 @@ class SmartPlug(object):
         try:
             response = urlopen(Request(self.url, payload.encode(), headers))
         except (HTTPError, URLError):
-            _LOGGER.warning("Failed to open url to {}".format(ip))
+            _LOGGER.warning("Failed to open url to {}".format(self.ip))
             self._error_report = True
             return None
 
