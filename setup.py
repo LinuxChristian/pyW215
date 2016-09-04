@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='pyW215',
-            version='0.2',
+            version='0.3',
             description='Interface for d-link W215 Smart Plugs.',
             url='https://github.com/linuxchristian/pyW215',
             author='Christian Fredborg Brædstrup',
