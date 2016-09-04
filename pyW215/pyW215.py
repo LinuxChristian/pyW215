@@ -28,7 +28,7 @@ class SmartPlug(object):
     """
 
     def __init__(self, ip, password, user = "admin",
-                 legacy_support = False):
+                 use_legacy_protocol = False):
         """
         Create a new SmartPlug instance identified by the given URL and password.
 
@@ -36,13 +36,15 @@ class SmartPlug(object):
         :param host: The IP/hostname of the SmartPlug. E.g. '192.168.0.10'
         :param password: Password to authenticate with the plug. Located on the plug.
         :param user: Username for the plug. Default is admin.
-        :param legacy_support: Support legacy firmware versions. Default is False.
+        :param use_legacy_protocol: Support legacy firmware versions. Default is False.
         """
         self.ip = ip
         self.url = "http://{}/HNAP1/".format(ip)
         self.user = user
         self.password = password
-        self.legacy_support = legacy_support
+        self.use_legacy_protocol = use_legacy_protocol
+        if self.use_legacy_protocol:
+            _LOGGER.error("Enabled support for legacy firmware.")
         self._error_report = False
 
     def moduleParameters(self, module):
