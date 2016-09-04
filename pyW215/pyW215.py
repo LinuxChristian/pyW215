@@ -27,7 +27,8 @@ class SmartPlug(object):
     Class layout is inspired by @rkabadi (https://github.com/rkabadi) for the Edimax Smart plug.
     """
 
-    def __init__(self, ip, password, user = "admin"):
+    def __init__(self, ip, password, user = "admin",
+                 legacy_support = False):
         """
         Create a new SmartPlug instance identified by the given URL and password.
 
@@ -35,11 +36,13 @@ class SmartPlug(object):
         :param host: The IP/hostname of the SmartPlug. E.g. '192.168.0.10'
         :param password: Password to authenticate with the plug. Located on the plug.
         :param user: Username for the plug. Default is admin.
+        :param legacy_support: Support legacy firmware versions. Default is False.
         """
         self.ip = ip
         self.url = "http://{}/HNAP1/".format(ip)
         self.user = user
         self.password = password
+        self.legacy_support = legacy_support
         self._error_report = False
 
     def moduleParameters(self, module):
@@ -60,8 +63,12 @@ class SmartPlug(object):
         :param status: The state to set (i.e. true (on) or false (off))
         :return XML string to join with payload
         """
-        return '''{}<NickName>Socket 1</NickName><Description>Socket 1</Description>
-                  <OPStatus>{}</OPStatus><Controller>1</Controller>'''.format(self.moduleParameters(module), status)
+        if self.legacy_support:
+            return '''{}<NickName>Socket 1</NickName><Description>Socket 1</Description>
+                      <OPStatus>{}</OPStatus><Controller>1</Controller>'''.format(self.moduleParameters(module), status)
+        else:
+            return '''{}<NickName>Socket 1</NickName><Description>Socket 1</Description>
+                      <OPStatus>{}</OPStatus>'''.format(self.moduleParameters(module), status)
 
     def radioParameters(self, radio):
         """Returns RadioID as XML.
