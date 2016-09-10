@@ -65,7 +65,7 @@ class SmartPlug(object):
         :param status: The state to set (i.e. true (on) or false (off))
         :return XML string to join with payload
         """
-        if self.legacy_support:
+        if self.use_legacy_protocol :
             return '''{}<NickName>Socket 1</NickName><Description>Socket 1</Description>
                       <OPStatus>{}</OPStatus><Controller>1</Controller>'''.format(self.moduleParameters(module), status)
         else:
