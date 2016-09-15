@@ -152,24 +152,31 @@ class SmartPlug(object):
     @property
     def current_consumption(self):
         """Get the current power consumption in Watt."""
-        res = self.SOAPAction('GetCurrentPowerConsumption', 'CurrentConsumption', self.moduleParameters("2"))
+        try:
+            res = self.SOAPAction('GetCurrentPowerConsumption', 'CurrentConsumption', self.moduleParameters("2"))
+        except:
+            return 'N/A'
 
         if res is None:
-            return None
+            return 'N/A'
 
         try:
             float(res)
         except ValueError:
             _LOGGER.error("Failed to retrieve current power consumption from SmartPlug")
 
-        return res
+        return 'N/A'
+
     @property
     def total_consumption(self):
         """Get the total power consumpuntion in the device lifetime."""
-        res = self.SOAPAction("GetPMWarningThreshold", "TotalConsumption", self.moduleParameters("2"))
+        try:
+            res = self.SOAPAction("GetPMWarningThreshold", "TotalConsumption", self.moduleParameters("2"))
+        except:
+            return 'N/A'
 
         if res is None:
-            return None
+            return 'N/A'
 
         try:
             float(res)
@@ -181,7 +188,12 @@ class SmartPlug(object):
     @property
     def temperature(self):
         """Get the device temperature in celsius."""
-        return self.SOAPAction('GetCurrentTemperature', 'CurrentTemperature', self.moduleParameters("3"))
+        try:
+            res = self.SOAPAction('GetCurrentTemperature', 'CurrentTemperature', self.moduleParameters("3"))
+        except:
+            res = 'N/A'
+
+        return res
 
     @property
     def state(self):
