@@ -152,6 +152,7 @@ class SmartPlug(object):
     @property
     def current_consumption(self):
         """Get the current power consumption in Watt."""
+        res = 'N/A'
         try:
             res = self.SOAPAction('GetCurrentPowerConsumption', 'CurrentConsumption', self.moduleParameters("2"))
         except:
@@ -161,15 +162,16 @@ class SmartPlug(object):
             return 'N/A'
 
         try:
-            float(res)
+            res = float(res)
         except ValueError:
             _LOGGER.error("Failed to retrieve current power consumption from SmartPlug")
 
-        return 'N/A'
+        return res
 
     @property
     def total_consumption(self):
         """Get the total power consumpuntion in the device lifetime."""
+        res = 'N/A'
         try:
             res = self.SOAPAction("GetPMWarningThreshold", "TotalConsumption", self.moduleParameters("2"))
         except:
