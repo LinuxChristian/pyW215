@@ -28,5 +28,6 @@ Note: You need to know the IP and password of you device. The password is writte
 
 ## Partial support
 * v1.24 (State changing working, but no support for reading temperature or current consumption)
+* D-Link W110 smart switch (only state changing is supported)
 
-If you have it working on other firmware versions please let me know.
+If you have it working on other firmware or hardware versions please let me know.
