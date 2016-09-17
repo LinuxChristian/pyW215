@@ -6,11 +6,18 @@ The library is largely inspired by the javascript implementation by @bikerp [dsp
 
 # Usage
 ```python
- from pyW215 import SmartPlug
+from pyW215 import SmartPlug
 
- sp = SmartPlug('192.168.1.110', '******')
- cc = sp.current_consumption
- print(cc)
+sp = SmartPlug('192.168.1.110', '******')
+ 
+# Get values if available otherwise return N/A
+print(sp.current_consumption)
+print(sp.temperature)
+print(sp.total_consumption)
+
+# Turn switch on and off
+sp.state = 'ON'
+sp.state = 'OFF'
 ```
 
 Note: You need to know the IP and password of you device. The password is written on the side.
@@ -20,6 +27,6 @@ Note: You need to know the IP and password of you device. The password is writte
 * v2.22
 
 ## Partial support
-* v1.24 (State changing working, but fails to read temperature or current consumption)
+* v1.24 (State changing working, but no support for reading temperature or current consumption)
 
 If you have it working on other firmware versions please let me know.
