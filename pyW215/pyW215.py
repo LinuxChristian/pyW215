@@ -171,6 +171,11 @@ class SmartPlug(object):
     @property
     def total_consumption(self):
         """Get the total power consumpuntion in the device lifetime."""
+        if self.use_legacy_protocol:
+            # TotalConsumption currently fails on the legacy protocol and
+            # creates a mess in the logs. Just return 'N/A' for now.
+            return 'N/A'
+
         res = 'N/A'
         try:
             res = self.SOAPAction("GetPMWarningThreshold", "TotalConsumption", self.moduleParameters("2"))
