@@ -26,6 +26,8 @@ Note: You need to know the IP and password of you device. The password is writte
 * v2.02
 * v2.22
 
+Note: If you experience problems with the switch first try upgrading to the latest supported firmware through the D-Link app. If the problem persists feel free to open an issue about the problem.
+
 ## Partial support
 * v1.24 (State changing working, but no support for reading temperature or current consumption)
 * D-Link W110 smart switch (only state changing is supported)
