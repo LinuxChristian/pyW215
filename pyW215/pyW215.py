@@ -140,7 +140,12 @@ class SmartPlug(object):
         root = ET.fromstring(xmlData)
 
         # Get value from device
-        value = root.find('.//{http://purenetworks.com/HNAP1/}%s' % (responseElement)).text
+        try:
+            value = root.find('.//{http://purenetworks.com/HNAP1/}%s' % (responseElement)).text
+        except AttributeError:
+            _LOGGER.warning("Unable to find %s in response." % responseElement)
+            return None
+
         if value is None and self._error_report is False:
             _LOGGER.warning("Could not find %s in response." % responseElement)
             self._error_report = True
