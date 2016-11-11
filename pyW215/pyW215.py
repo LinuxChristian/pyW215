@@ -44,7 +44,7 @@ class SmartPlug(object):
         self.password = password
         self.use_legacy_protocol = use_legacy_protocol
         if self.use_legacy_protocol:
-            _LOGGER.error("Enabled support for legacy firmware.")
+            _LOGGER.info("Enabled support for legacy firmware.")
         self._error_report = False
 
     def moduleParameters(self, module):
