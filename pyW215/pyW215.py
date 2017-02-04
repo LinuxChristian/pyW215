@@ -155,6 +155,7 @@ class SmartPlug(object):
         return value
 
     def fetchMyCgi(self):
+        """Fetches statistics from my_cgi.cgi"""
         try:
             response = urlopen(Request('http://{}/my_cgi.cgi'.format(self.ip), b'request=create_chklst'));
         except (HTTPError, URLError):
