@@ -9,7 +9,7 @@ The library is largely inspired by the javascript implementation by @bikerp [dsp
 from pyW215 import SmartPlug
 
 sp = SmartPlug('192.168.1.110', '******')
- 
+
 # Get values if available otherwise return N/A
 print(sp.current_consumption)
 print(sp.temperature)
@@ -29,7 +29,7 @@ Note: You need to know the IP and password of you device. The password is writte
 Note: If you experience problems with the switch first try upgrading to the latest supported firmware through the D-Link app. If the problem persists feel free to open an issue about the problem.
 
 ## Partial support
-* v1.24 (State changing working, but no support for reading temperature or current consumption)
+* v1.24 (State changing and current consumption working, but no support for reading temperature)
 * D-Link W110 smart switch (only state changing is supported)
 
 If you have it working on other firmware or hardware versions please let me know.
