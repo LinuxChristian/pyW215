@@ -154,14 +154,33 @@ class SmartPlug(object):
         self._error_report = False
         return value
 
+    def fetchMyCgi(self):
+        """Fetches statistics from my_cgi.cgi"""
+        try:
+            response = urlopen(Request('http://{}/my_cgi.cgi'.format(self.ip), b'request=create_chklst'));
+        except (HTTPError, URLError):
+            _LOGGER.warning("Failed to open url to {}".format(self.ip))
+            self._error_report = True
+            return None
+
+        lines = response.readlines()
+        return {line.decode().split(':')[0].strip(): line.decode().split(':')[1].strip() for line in lines}
+
     @property
     def current_consumption(self):
         """Get the current power consumption in Watt."""
         res = 'N/A'
-        try:
-            res = self.SOAPAction('GetCurrentPowerConsumption', 'CurrentConsumption', self.moduleParameters("2"))
-        except:
-            return 'N/A'
+        if self.use_legacy_protocol:
+            # Use /my_cgi.cgi to retrieve current consumption
+            try:
+                res = self.fetchMyCgi()['Meter Watt']
+            except:
+                return 'N/A'
+        else:
+            try:
+                res = self.SOAPAction('GetCurrentPowerConsumption', 'CurrentConsumption', self.moduleParameters("2"))
+            except:
+                return 'N/A'
 
         if res is None:
             return 'N/A'
