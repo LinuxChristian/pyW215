@@ -1,6 +1,11 @@
 
-from urllib.request import Request, urlopen
-from urllib.error import URLError, HTTPError
+try:
+    from urllib.request import Request, urlopen
+    from urllib.error import URLError, HTTPError
+except ImportError:
+    # Assume Python 2.x
+    from urllib2 import Request, urlopen
+    from urllib2 import URLError, HTTPError
 import xml.etree.ElementTree as ET
 import hmac
 import time
