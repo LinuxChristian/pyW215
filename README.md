@@ -5,7 +5,8 @@ pyW215 is a python3 library for interfacing with the d-link W215 Smart Plug.
 The library is largely inspired by the javascript implementation by @bikerp [dsp-w215-hnap](https://github.com/bikerp/dsp-w215-hnap).
 
 # Usage
-```python3
+```python
+#!python3
 from pyW215.pyW215 import SmartPlug
 
 sp = SmartPlug('192.168.1.110', '******')
