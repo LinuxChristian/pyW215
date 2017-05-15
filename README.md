@@ -7,7 +7,7 @@ The library is largely inspired by the javascript implementation by @bikerp [dsp
 # Usage
 ```python
 #!python3
-from pyW215.pyW215 import SmartPlug
+from pyW215.pyW215 import SmartPlug, ON, OFF
 
 sp = SmartPlug('192.168.1.110', '******')
 # Where ****** is the "code pin" printed on the setup card
@@ -18,8 +18,8 @@ print(sp.temperature)
 print(sp.total_consumption)
 
 # Turn switch on and off
-sp.state = 'ON'
-sp.state = 'OFF'
+sp.state = ON
+sp.state = OFF
 ```
 
 Note: You need to know the IP and password of you device. The password is written on the side.
