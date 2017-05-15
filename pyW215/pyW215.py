@@ -51,6 +51,7 @@ class SmartPlug(object):
         if self.use_legacy_protocol:
             _LOGGER.info("Enabled support for legacy firmware.")
         self._error_report = False
+        self.model_name = self.SOAPAction(Action="", responseElement="ModelName", params = "")
 
     def moduleParameters(self, module):
         """Returns moduleID XML.
