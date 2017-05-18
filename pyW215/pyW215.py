@@ -13,16 +13,22 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
+
+ON = 'ON'
+OFF = 'OFF'
+
 class SmartPlug(object):
     """
-    Class to access a D-Link Smart Plug Switch W215
+    Class to access:
+        * D-Link Smart Plug Switch W215
+        * D-Link Smart Plug DSP-W110
 
     Usage example when used as library:
     p = SmartPlug("192.168.0.10", ('admin', '1234'))
 
     # change state of plug
-    p.state = "OFF"
-    p.state = "ON"
+    p.state = OFF
+    p.state = ON
 
     # query and print current state of plug
     print(p.state)
@@ -238,9 +244,9 @@ class SmartPlug(object):
         if response is None:
             return 'unknown'
         elif response.lower() == 'true':
-            return "ON"
+            return ON
         elif response.lower() == 'false':
-            return "OFF"
+            return OFF
         else:
             _LOGGER.warning("Unknown state %s returned" % str(response.lower()))
             return 'unknown'
@@ -252,9 +258,9 @@ class SmartPlug(object):
         :type value: str
         :param value: Future state (either ON or OFF)
         """
-        if value.upper() == 'ON':
+        if value.upper() == ON:
             return self.SOAPAction('SetSocketSettings', 'SetSocketSettingsResult', self.controlParameters("1", "true"))
-        elif value.upper() == 'OFF':
+        elif value.upper() == OFF:
             return self.SOAPAction('SetSocketSettings', 'SetSocketSettingsResult', self.controlParameters("1", "false"))
         else:
             raise TypeError("State %s is not valid." % str(value))
