@@ -33,6 +33,6 @@ Note: If you experience problems with the switch first try upgrading to the late
 
 ## Partial support
 * v1.24 (State changing and current consumption working, but no support for reading temperature)
-* D-Link W110 smart switch (only state changing is supported)
+* D-Link W110 smart switch D-Link W110 smart switch (only state viewing and changing is supported)
 
 If you have it working on other firmware or hardware versions please let me know.
