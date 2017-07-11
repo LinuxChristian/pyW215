@@ -9,7 +9,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(name='pyW215',
-      version='0.4',
+      version='0.5',
       description='Interface for d-link W215 Smart Plugs.',
       long_description=long_description,
       url='https://github.com/linuxchristian/pyW215',
