@@ -5,51 +5,50 @@ pyW215 is a python3 library for interfacing with the d-link W215 Smart
 Plug.
 
 The library is largely inspired by the javascript implementation by
-@bikerp `dsp-w215-hnap`_.
+@bikerp `dsp-w215-hnap`.
 
 Usage
 =====
 
 .. code:: python
 
-	  #!python3
-	  from pyW215.pyW215 import SmartPlug, ON, OFF
+   #!python3
+   from pyW215.pyW215 import SmartPlug, ON, OFF
 
-	  sp = SmartPlug('192.168.1.110', '******')
-	  # Where ****** is the "code pin" printed on the setup card
+   sp = SmartPlug('192.168.1.110', '******')
+   # Where ****** is the "code pin" printed on the setup card
 
-	  # Get values if available otherwise return N/A
-	  print(sp.current_consumption)
-	  print(sp.temperature)
-	  print(sp.total_consumption)
+   # Get values if available otherwise return N/A
+   print(sp.current_consumption)
+   print(sp.temperature)
+   print(sp.total_consumption)
 
-	  # Turn switch on and off
-	  sp.state = ON
-	  sp.state = OFF
+   # Turn switch on and off
+   sp.state = ON
+   sp.state = OFF
 
-   Note: You need to know the IP and password of you device. The password
-	  is written on the side.
+Note: You need to know the IP and password of you device. The password is written on the side.
 
-   Working firmware versions
-	  =========================
+Working firmware versions
+=========================
 
    -  v2.02
    -  v2.03
    -  v2.22
 
-   Note: If you experience problems with the switch first try upgrading to
-      the latest supported firmware through the D-Link app. If the problem
-   persists feel free to open an issue about the problem.
+Note: If you experience problems with the switch first try upgrading to
+the latest supported firmware through the D-Link app. If the problem
+persists feel free to open an issue about the problem.
 
-      Partial support
-   ---------------
+Partial support
+---------------
 
-      -  v1.24 (State changing and current consumption working, but no support
-	 for reading temperature)
-      -  D-Link W110 smart switch D-Link W110 smart switch (only state viewing
-	 and changing is supported)
+   -  v1.24 (State changing and current consumption working, but no support
+      for reading temperature)
+   -  D-Link W110 smart switch D-Link W110 smart switch (only state viewing
+      and changing is supported)
 
-      If you have it working on other firmware or hardware versions please let
-	 me know.
+If you have it working on other firmware or hardware versions please let
+me know.
 
-	 .. _dsp-w215-hnap: https://github.com/bikerp/dsp-w215-hnap
+.. _dsp-w215-hnap: https://github.com/bikerp/dsp-w215-hnap
