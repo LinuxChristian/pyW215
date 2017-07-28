@@ -8,7 +8,7 @@ The library is largely inspired by the javascript implementation by
 @bikerp `dsp-w215-hnap`_.
 
 Installing
-=====
+==========
 Install using the PyPI index
 
 .. code:: bash
