@@ -112,6 +112,21 @@ class SmartPlug(object):
         </soap:Body>
         </soap:Envelope>
                '''.format(Action, params, Action)
+               
+    def requestHeaders(self, Action, auth):
+        """Returns the request headers for an action, encoded with the given auth"""
+        
+        # Timestamp in microseconds
+        time_stamp = str(round(time.time()/1e6))
+
+        action_url = '"http://purenetworks.com/HNAP1/{}"'.format(Action)
+        AUTHKey = hmac.new(auth[0].encode(), (time_stamp+action_url).encode()).hexdigest().upper() + " " + time_stamp
+
+        headers = {'Content-Type' : '"text/xml; charset=utf-8"',
+                   'SOAPAction': '"http://purenetworks.com/HNAP1/{}"'.format(Action),
+                   'HNAP_AUTH' : '{}'.format(AUTHKey),
+                   'Cookie' : 'uid={}'.format(auth[1])}
+        return headers
 
     def SOAPAction(self, Action, responseElement, params = ""):
         """Generate the SOAP action call.
@@ -135,24 +150,20 @@ class SmartPlug(object):
         if auth is None:
             return None
         payload = self.requestBody(Action, params)
-
-        # Timestamp in microseconds
-        time_stamp = str(round(time.time()/1e6))
-
-        action_url = '"http://purenetworks.com/HNAP1/{}"'.format(Action)
-        AUTHKey = hmac.new(auth[0].encode(), (time_stamp+action_url).encode()).hexdigest().upper() + " " + time_stamp
-
-        headers = {'Content-Type' : '"text/xml; charset=utf-8"',
-                   'SOAPAction': '"http://purenetworks.com/HNAP1/{}"'.format(Action),
-                   'HNAP_AUTH' : '{}'.format(AUTHKey),
-                   'Cookie' : 'uid={}'.format(auth[1])}
+        headers = self.requestHeaders(Action, auth)
 
         try:
             response = urlopen(Request(self.url, payload.encode(), headers))
         except (HTTPError, URLError):
-            _LOGGER.warning("Failed to open url to {}".format(self.ip))
-            self._error_report = True
-            return None
+            #if it is firmware 1.25, it could mean we need to re-authenticate, so let's try
+            self.authenticated = self.auth()
+            headers = self.requestHeaders(Action, self.authenticated)
+            try:
+                response = urlopen(Request(self.url, payload.encode(), headers))
+            except (HTTPError, URLError):
+                _LOGGER.warning("Failed to open url to {}".format(self.ip))
+                self._error_report = True
+                return None
 
         xmlData = response.read().decode()
         root = ET.fromstring(xmlData)
