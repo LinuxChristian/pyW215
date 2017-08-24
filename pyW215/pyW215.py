@@ -54,6 +54,7 @@ class SmartPlug(object):
         self.user = user
         self.password = password
         self.use_legacy_protocol = use_legacy_protocol
+        self.authenticated = None
         if self.use_legacy_protocol:
             _LOGGER.info("Enabled support for legacy firmware.")
         self._error_report = False
@@ -124,7 +125,12 @@ class SmartPlug(object):
         :return: Text enclosed in responseElement brackets
         """
         # Authenticate client
-        auth = self.auth()
+        if self.authenticated is None:
+            self.authenticated = self.auth()
+        auth = self.authenticated
+        #If not legacy protocol, ensure auth() is called for every call
+        if not self.use_legacy_protocol:
+            self.authenticated = None
 
         if auth is None:
             return None
