@@ -112,21 +112,7 @@ class SmartPlug(object):
         </soap:Body>
         </soap:Envelope>
                '''.format(Action, params, Action)
-               
-    def requestHeaders(self, Action, auth):
-        """Returns the request headers for an action, encoded with the given auth"""
-        
-        # Timestamp in microseconds
-        time_stamp = str(round(time.time()/1e6))
-
-        action_url = '"http://purenetworks.com/HNAP1/{}"'.format(Action)
-        AUTHKey = hmac.new(auth[0].encode(), (time_stamp+action_url).encode()).hexdigest().upper() + " " + time_stamp
-
-        headers = {'Content-Type' : '"text/xml; charset=utf-8"',
-                   'SOAPAction': '"http://purenetworks.com/HNAP1/{}"'.format(Action),
-                   'HNAP_AUTH' : '{}'.format(AUTHKey),
-                   'Cookie' : 'uid={}'.format(auth[1])}
-        return headers
+    
 
     def SOAPAction(self, Action, responseElement, params = ""):
         """Generate the SOAP action call.
@@ -134,9 +120,11 @@ class SmartPlug(object):
         :type Action: str
         :type responseElement: str
         :type params: str
+        :type recursive: bool
         :param Action: The action to perform on the device
         :param responseElement: The XML element that is returned upon success
         :param params: Any additional parameters required for performing request (i.e. RadioID, moduleID, ect)
+        :param recursive: True if first attempt failed and now attempting to re-authenticate prior
         :return: Text enclosed in responseElement brackets
         """
         # Authenticate client
@@ -150,20 +138,32 @@ class SmartPlug(object):
         if auth is None:
             return None
         payload = self.requestBody(Action, params)
-        headers = self.requestHeaders(Action, auth)
+
+        # Timestamp in microseconds
+        time_stamp = str(round(time.time()/1e6))
+
+        action_url = '"http://purenetworks.com/HNAP1/{}"'.format(Action)
+        AUTHKey = hmac.new(auth[0].encode(), (time_stamp+action_url).encode()).hexdigest().upper() + " " + time_stamp
+
+        headers = {'Content-Type' : '"text/xml; charset=utf-8"',
+                   'SOAPAction': '"http://purenetworks.com/HNAP1/{}"'.format(Action),
+                   'HNAP_AUTH' : '{}'.format(AUTHKey),
+                   'Cookie' : 'uid={}'.format(auth[1])}
 
         try:
             response = urlopen(Request(self.url, payload.encode(), headers))
         except (HTTPError, URLError):
-            #if it is firmware 1.25, it could mean we need to re-authenticate, so let's try
-            self.authenticated = self.auth()
-            headers = self.requestHeaders(Action, self.authenticated)
-            try:
-                response = urlopen(Request(self.url, payload.encode(), headers))
-            except (HTTPError, URLError):
+            # Try to re-authenticate once
+            self.authenticated = None
+            # Recursive call to retry action
+            if not recursive:
+                return_value = self.SOAPAction(Action, responseElement, params, True)
+            if recursive or return_value is None:
                 _LOGGER.warning("Failed to open url to {}".format(self.ip))
                 self._error_report = True
                 return None
+            else:
+                return return_value
 
         xmlData = response.read().decode()
         root = ET.fromstring(xmlData)
