@@ -114,7 +114,7 @@ class SmartPlug(object):
                '''.format(Action, params, Action)
     
 
-    def SOAPAction(self, Action, responseElement, params = ""):
+    def SOAPAction(self, Action, responseElement, params = "", recursive = False):
         """Generate the SOAP action call.
 
         :type Action: str
