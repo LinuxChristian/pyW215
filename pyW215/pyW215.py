@@ -54,6 +54,7 @@ class SmartPlug(object):
         self.user = user
         self.password = password
         self.use_legacy_protocol = use_legacy_protocol
+        self.authenticated = None
         if self.use_legacy_protocol:
             _LOGGER.info("Enabled support for legacy firmware.")
         self._error_report = False
@@ -111,20 +112,28 @@ class SmartPlug(object):
         </soap:Body>
         </soap:Envelope>
                '''.format(Action, params, Action)
+    
 
-    def SOAPAction(self, Action, responseElement, params = ""):
+    def SOAPAction(self, Action, responseElement, params = "", recursive = False):
         """Generate the SOAP action call.
 
         :type Action: str
         :type responseElement: str
         :type params: str
+        :type recursive: bool
         :param Action: The action to perform on the device
         :param responseElement: The XML element that is returned upon success
         :param params: Any additional parameters required for performing request (i.e. RadioID, moduleID, ect)
+        :param recursive: True if first attempt failed and now attempting to re-authenticate prior
         :return: Text enclosed in responseElement brackets
         """
         # Authenticate client
-        auth = self.auth()
+        if self.authenticated is None:
+            self.authenticated = self.auth()
+        auth = self.authenticated
+        #If not legacy protocol, ensure auth() is called for every call
+        if not self.use_legacy_protocol:
+            self.authenticated = None
 
         if auth is None:
             return None
@@ -144,9 +153,17 @@ class SmartPlug(object):
         try:
             response = urlopen(Request(self.url, payload.encode(), headers))
         except (HTTPError, URLError):
-            _LOGGER.warning("Failed to open url to {}".format(self.ip))
-            self._error_report = True
-            return None
+            # Try to re-authenticate once
+            self.authenticated = None
+            # Recursive call to retry action
+            if not recursive:
+                return_value = self.SOAPAction(Action, responseElement, params, True)
+            if recursive or return_value is None:
+                _LOGGER.warning("Failed to open url to {}".format(self.ip))
+                self._error_report = True
+                return None
+            else:
+                return return_value
 
         xmlData = response.read().decode()
         root = ET.fromstring(xmlData)
