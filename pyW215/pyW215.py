@@ -58,16 +58,13 @@ class SmartPlug(object):
         if self.use_legacy_protocol:
             _LOGGER.info("Enabled support for legacy firmware.")
         self._error_report = False
-        self.model_name = self.SOAPAction(Action="GetDeviceSettings", responseElement="ModelName", params = "")
-
-    def moduleParameters(self, module):
-        """Returns moduleID XML.
-
-        :type module: str
-        :param module: module number/ID
-        :return XML string with moduleID
-        """
-        return '''<ModuleID>{}</ModuleID>'''.format(module)
+        self.model_name = self.get_soap_value(Action="GetDeviceSettings", responseElement="ModelName", params = "")
+        self.modules = {
+                'socket': '<ModuleID>1</ModuleID>',
+                'power': '<ModuleID>2</ModuleID>',
+                'temperature': '<ModuleID>3</ModuleID>'
+                }
+        self.refresh_modules()
 
     def controlParameters(self, module, status):
         """Returns control parameters as XML.
@@ -80,10 +77,10 @@ class SmartPlug(object):
         """
         if self.use_legacy_protocol :
             return '''{}<NickName>Socket 1</NickName><Description>Socket 1</Description>
-                      <OPStatus>{}</OPStatus><Controller>1</Controller>'''.format(self.moduleParameters(module), status)
+                      <OPStatus>{}</OPStatus><Controller>1</Controller>'''.format(module, status)
         else:
             return '''{}<NickName>Socket 1</NickName><Description>Socket 1</Description>
-                      <OPStatus>{}</OPStatus>'''.format(self.moduleParameters(module), status)
+                      <OPStatus>{}</OPStatus>'''.format(module, status)
 
     def radioParameters(self, radio):
         """Returns RadioID as XML.
@@ -166,7 +163,10 @@ class SmartPlug(object):
                 return return_value
 
         xmlData = response.read().decode()
-        root = ET.fromstring(xmlData)
+        return ET.fromstring(xmlData)
+
+    def get_soap_value(self, Action, responseElement, params = ""):
+        root = self.SOAPAction(Action, responseElement, params)
 
         # Get value from device
         try:
@@ -183,6 +183,24 @@ class SmartPlug(object):
         self._error_report = False
         return value
 
+    def get_soap_element(self, Action, responseElement, params = ""):
+        root = self.SOAPAction(Action, responseElement, params)
+
+        # Get value from device
+        try:
+            value = root.find('.//{http://purenetworks.com/HNAP1/}%s' % (responseElement))
+        except AttributeError:
+            _LOGGER.warning("Unable to find %s in response." % responseElement)
+            return None
+
+        if value is None and self._error_report is False:
+            _LOGGER.warning("Could not find %s in response." % responseElement)
+            self._error_report = True
+            return None
+
+        self._error_report = False
+        return value.getchildren()
+
     def fetchMyCgi(self):
         """Fetches statistics from my_cgi.cgi"""
         try:
@@ -194,6 +212,23 @@ class SmartPlug(object):
 
         lines = response.readlines()
         return {line.decode().split(':')[0].strip(): line.decode().split(':')[1].strip() for line in lines}
+
+    def refresh_modules(self):
+        if self.use_legacy_protocol:
+            # unsupported
+            return
+        try:
+            profiles = self.get_soap_element('GetModuleProfile', 'ModuleProfileList', params = "")
+            for profile in profiles:
+                id = profile.find('{http://purenetworks.com/HNAP1/}ModuleID').text
+                subtype = profile.find('{http://purenetworks.com/HNAP1/}ModuleSubType').text
+                if subtype == 'Electrical Power Meter':
+                    self.modules['power'] = '<ModuleID>{}</ModuleID>'.format(id)
+                if subtype == 'Temperature Monitor':
+                    self.modules['temperature'] = '<ModuleID>{}</ModuleID>'.format(id) 
+        except:
+            # use default module ids
+            return
 
     @property
     def current_consumption(self):
@@ -207,7 +242,7 @@ class SmartPlug(object):
                 return 'N/A'
         else:
             try:
-                res = self.SOAPAction('GetCurrentPowerConsumption', 'CurrentConsumption', self.moduleParameters("2"))
+                res = self.get_soap_value('GetCurrentPowerConsumption', 'CurrentConsumption', self.modules['power'])
             except:
                 return 'N/A'
 
@@ -231,7 +266,7 @@ class SmartPlug(object):
 
         res = 'N/A'
         try:
-            res = self.SOAPAction("GetPMWarningThreshold", "TotalConsumption", self.moduleParameters("2"))
+            res = self.get_soap_value("GetPMWarningThreshold", "TotalConsumption", self.modules['power'])
         except:
             return 'N/A'
 
@@ -249,7 +284,7 @@ class SmartPlug(object):
     def temperature(self):
         """Get the device temperature in celsius."""
         try:
-            res = self.SOAPAction('GetCurrentTemperature', 'CurrentTemperature', self.moduleParameters("3"))
+            res = self.get_soap_value('GetCurrentTemperature', 'CurrentTemperature', self.modules['temperature'])
         except:
             res = 'N/A'
 
@@ -258,7 +293,7 @@ class SmartPlug(object):
     @property
     def state(self):
         """Get the device state (i.e. ON or OFF)."""
-        response =  self.SOAPAction('GetSocketSettings', 'OPStatus', self.moduleParameters("1"))
+        response =  self.get_soap_value('GetSocketSettings', 'OPStatus', self.modules['socket'])
         if response is None:
             return 'unknown'
         elif response.lower() == 'true':
@@ -277,9 +312,9 @@ class SmartPlug(object):
         :param value: Future state (either ON or OFF)
         """
         if value.upper() == ON:
-            return self.SOAPAction('SetSocketSettings', 'SetSocketSettingsResult', self.controlParameters("1", "true"))
+            return self.get_soap_value('SetSocketSettings', 'SetSocketSettingsResult', self.controlParameters(self.modules['socket'], "true"))
         elif value.upper() == OFF:
-            return self.SOAPAction('SetSocketSettings', 'SetSocketSettingsResult', self.controlParameters("1", "false"))
+            return self.get_soap_value('SetSocketSettings', 'SetSocketSettingsResult', self.controlParameters(self.modules['socket'], "false"))
         else:
             raise TypeError("State %s is not valid." % str(value))
 
