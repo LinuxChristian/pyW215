@@ -221,6 +221,10 @@ class SmartPlug(object):
 
         return res
 
+    def get_current_consumption(self):
+        """Get the current power consumption in Watt."""
+        return self.current_consumption
+
     @property
     def total_consumption(self):
         """Get the total power consumpuntion in the device lifetime."""
@@ -245,6 +249,10 @@ class SmartPlug(object):
 
         return res
 
+    def get_total_consumption(self):
+        """Get the total power consumpuntion in the device lifetime."""
+        return self.total_consumption
+
     @property
     def temperature(self):
         """Get the device temperature in celsius."""
@@ -254,6 +262,10 @@ class SmartPlug(object):
             res = 'N/A'
 
         return res
+
+    def get_temperature(self):
+        """Get the device temperature in celsius.""" 
+        return self.temperature
 
     @property
     def state(self):
@@ -282,6 +294,10 @@ class SmartPlug(object):
             return self.SOAPAction('SetSocketSettings', 'SetSocketSettingsResult', self.controlParameters("1", "false"))
         else:
             raise TypeError("State %s is not valid." % str(value))
+
+     def get_state(self):
+        """Get the device state (i.e. ON or OFF)."""
+        return self.state
 
     def auth(self):
         """Authenticate using the SOAP interface.
