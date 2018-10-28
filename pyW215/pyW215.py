@@ -295,7 +295,7 @@ class SmartPlug(object):
         else:
             raise TypeError("State %s is not valid." % str(value))
 
-     def get_state(self):
+    def get_state(self):
         """Get the device state (i.e. ON or OFF)."""
         return self.state
 
@@ -340,10 +340,13 @@ class SmartPlug(object):
             _LOGGER.warning("Failed to receive initial authentication from smartplug.")
             self._error_report = True
             return None
-        else:
-            Challenge = ChallengeResponse.text
-            Cookie = CookieResponse.text
-            Publickey = PublickeyResponse.text
+
+        if self._error_report is True:
+            return None
+
+        Challenge = ChallengeResponse.text
+        Cookie = CookieResponse.text
+        Publickey = PublickeyResponse.text
 
         # Generate hash responses
         PrivateKey = hmac.new((Publickey+self.password).encode(), (Challenge).encode()).hexdigest().upper()
