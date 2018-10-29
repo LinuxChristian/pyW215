@@ -295,7 +295,7 @@ class SmartPlug(object):
         else:
             raise TypeError("State %s is not valid." % str(value))
 
-     def get_state(self):
+    def get_state(self):
         """Get the device state (i.e. ON or OFF)."""
         return self.state
 
@@ -332,14 +332,21 @@ class SmartPlug(object):
         root = ET.fromstring(xmlData)
 
         # Find responses
-        Challenge = root.find('.//{http://purenetworks.com/HNAP1/}Challenge').text
-        Cookie = root.find('.//{http://purenetworks.com/HNAP1/}Cookie').text
-        Publickey = root.find('.//{http://purenetworks.com/HNAP1/}PublicKey').text
+        ChallengeResponse = root.find('.//{http://purenetworks.com/HNAP1/}Challenge')
+        CookieResponse = root.find('.//{http://purenetworks.com/HNAP1/}Cookie')
+        PublickeyResponse = root.find('.//{http://purenetworks.com/HNAP1/}PublicKey')
 
-        if (Challenge == None or Cookie == None or Publickey == None) and self._error_report is False:
+        if (ChallengeResponse == None or CookieResponse == None or PublickeyResponse == None) and self._error_report is False:
             _LOGGER.warning("Failed to receive initial authentication from smartplug.")
             self._error_report = True
             return None
+
+        if self._error_report is True:
+            return None
+
+        Challenge = ChallengeResponse.text
+        Cookie = CookieResponse.text
+        Publickey = PublickeyResponse.text
 
         # Generate hash responses
         PrivateKey = hmac.new((Publickey+self.password).encode(), (Challenge).encode()).hexdigest().upper()
