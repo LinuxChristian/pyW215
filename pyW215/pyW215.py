@@ -7,15 +7,16 @@ except ImportError:
     from urllib2 import Request, urlopen
     from urllib2 import URLError, HTTPError
 import xml.etree.ElementTree as ET
+import hashlib
 import hmac
 import time
 import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-
 ON = 'ON'
 OFF = 'OFF'
+
 
 class SmartPlug(object):
     """
@@ -38,8 +39,8 @@ class SmartPlug(object):
     Class layout is inspired by @rkabadi (https://github.com/rkabadi) for the Edimax Smart plug.
     """
 
-    def __init__(self, ip, password, user = "admin",
-                 use_legacy_protocol = False):
+    def __init__(self, ip, password, user="admin",
+                 use_legacy_protocol=False):
         """
         Create a new SmartPlug instance identified by the given URL and password.
 
@@ -58,7 +59,7 @@ class SmartPlug(object):
         if self.use_legacy_protocol:
             _LOGGER.info("Enabled support for legacy firmware.")
         self._error_report = False
-        self.model_name = self.SOAPAction(Action="GetDeviceSettings", responseElement="ModelName", params = "")
+        self.model_name = self.SOAPAction(Action="GetDeviceSettings", responseElement="ModelName", params="")
 
     def moduleParameters(self, module):
         """Returns moduleID XML.
@@ -78,7 +79,7 @@ class SmartPlug(object):
         :param status: The state to set (i.e. true (on) or false (off))
         :return XML string to join with payload
         """
-        if self.use_legacy_protocol :
+        if self.use_legacy_protocol:
             return '''{}<NickName>Socket 1</NickName><Description>Socket 1</Description>
                       <OPStatus>{}</OPStatus><Controller>1</Controller>'''.format(self.moduleParameters(module), status)
         else:
@@ -92,7 +93,6 @@ class SmartPlug(object):
         :param radio: Radio number/ID
         """
         return '''<RadioID>{}</RadioID>'''.format(radio)
-
 
     def requestBody(self, Action, params):
         """Returns the request payload for an action as XML>.
@@ -112,9 +112,8 @@ class SmartPlug(object):
         </soap:Body>
         </soap:Envelope>
                '''.format(Action, params, Action)
-    
 
-    def SOAPAction(self, Action, responseElement, params = "", recursive = False):
+    def SOAPAction(self, Action, responseElement, params="", recursive=False):
         """Generate the SOAP action call.
 
         :type Action: str
@@ -131,7 +130,7 @@ class SmartPlug(object):
         if self.authenticated is None:
             self.authenticated = self.auth()
         auth = self.authenticated
-        #If not legacy protocol, ensure auth() is called for every call
+        # If not legacy protocol, ensure auth() is called for every call
         if not self.use_legacy_protocol:
             self.authenticated = None
 
@@ -140,15 +139,15 @@ class SmartPlug(object):
         payload = self.requestBody(Action, params)
 
         # Timestamp in microseconds
-        time_stamp = str(round(time.time()/1e6))
+        time_stamp = str(round(time.time() / 1e6))
 
         action_url = '"http://purenetworks.com/HNAP1/{}"'.format(Action)
-        AUTHKey = hmac.new(auth[0].encode(), (time_stamp+action_url).encode()).hexdigest().upper() + " " + time_stamp
+        AUTHKey = hmac.new(auth[0].encode(), (time_stamp + action_url).encode(), digestmod=hashlib.md5).hexdigest().upper() + " " + time_stamp
 
-        headers = {'Content-Type' : '"text/xml; charset=utf-8"',
+        headers = {'Content-Type': '"text/xml; charset=utf-8"',
                    'SOAPAction': '"http://purenetworks.com/HNAP1/{}"'.format(Action),
-                   'HNAP_AUTH' : '{}'.format(AUTHKey),
-                   'Cookie' : 'uid={}'.format(auth[1])}
+                   'HNAP_AUTH': '{}'.format(AUTHKey),
+                   'Cookie': 'uid={}'.format(auth[1])}
 
         try:
             response = urlopen(Request(self.url, payload.encode(), headers))
@@ -264,13 +263,13 @@ class SmartPlug(object):
         return res
 
     def get_temperature(self):
-        """Get the device temperature in celsius.""" 
+        """Get the device temperature in celsius."""
         return self.temperature
 
     @property
     def state(self):
         """Get the device state (i.e. ON or OFF)."""
-        response =  self.SOAPAction('GetSocketSettings', 'OPStatus', self.moduleParameters("1"))
+        response = self.SOAPAction('GetSocketSettings', 'OPStatus', self.moduleParameters("1"))
         if response is None:
             return 'unknown'
         elif response.lower() == 'true':
@@ -317,8 +316,8 @@ class SmartPlug(object):
         payload = self.initial_auth_payload()
 
         # Build initial header
-        headers = {'Content-Type' : '"text/xml; charset=utf-8"',
-           'SOAPAction': '"http://purenetworks.com/HNAP1/Login"'}
+        headers = {'Content-Type': '"text/xml; charset=utf-8"',
+                   'SOAPAction': '"http://purenetworks.com/HNAP1/Login"'}
 
         # Request privatekey, cookie and challenge
         try:
@@ -336,7 +335,8 @@ class SmartPlug(object):
         CookieResponse = root.find('.//{http://purenetworks.com/HNAP1/}Cookie')
         PublickeyResponse = root.find('.//{http://purenetworks.com/HNAP1/}PublicKey')
 
-        if (ChallengeResponse == None or CookieResponse == None or PublickeyResponse == None) and self._error_report is False:
+        if (
+                ChallengeResponse == None or CookieResponse == None or PublickeyResponse == None) and self._error_report is False:
             _LOGGER.warning("Failed to receive initial authentication from smartplug.")
             self._error_report = True
             return None
@@ -349,15 +349,15 @@ class SmartPlug(object):
         Publickey = PublickeyResponse.text
 
         # Generate hash responses
-        PrivateKey = hmac.new((Publickey+self.password).encode(), (Challenge).encode()).hexdigest().upper()
-        login_pwd = hmac.new(PrivateKey.encode(), Challenge.encode()).hexdigest().upper()
+        PrivateKey = hmac.new((Publickey + self.password).encode(), (Challenge).encode(), digestmod=hashlib.md5).hexdigest().upper()
+        login_pwd = hmac.new(PrivateKey.encode(), Challenge.encode(), digestmod=hashlib.md5).hexdigest().upper()
 
         response_payload = self.auth_payload(login_pwd)
         # Build response to initial request
-        headers = {'Content-Type' : '"text/xml; charset=utf-8"',
-           'SOAPAction': '"http://purenetworks.com/HNAP1/Login"',
-           'HNAP_AUTH' : '"{}"'.format(PrivateKey),
-           'Cookie' : 'uid={}'.format(Cookie)}
+        headers = {'Content-Type': '"text/xml; charset=utf-8"',
+                   'SOAPAction': '"http://purenetworks.com/HNAP1/Login"',
+                   'HNAP_AUTH': '"{}"'.format(PrivateKey),
+                   'Cookie': 'uid={}'.format(Cookie)}
         response = urlopen(Request(self.url, response_payload, headers))
         xmlData = response.read().decode()
         root = ET.fromstring(xmlData)
@@ -370,7 +370,7 @@ class SmartPlug(object):
             self._error_report = True
             return None
 
-        self._error_report = False # Reset error logging
+        self._error_report = False  # Reset error logging
         return (PrivateKey, Cookie)
 
     def initial_auth_payload(self):
