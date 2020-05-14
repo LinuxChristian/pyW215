@@ -54,8 +54,8 @@ Partial support
 
 If you have it working on other firmware or hardware versions please let me know.
 
-Need support for W245?
-------------------------
+Need support for W115 or W245?
+-------------------------------
 Checkout this library, https://github.com/jonassjoh/dspW245
 
 .. _dsp-w215-hnap: https://github.com/bikerp/dsp-w215-hnap
