@@ -40,7 +40,7 @@ class SmartPlug(object):
     """
 
     def __init__(self, ip, password, user="admin",
-                 use_legacy_protocol=False):
+                 use_legacy_protocol=False, auth_interval=10):
         """
         Create a new SmartPlug instance identified by the given URL and password.
 
@@ -49,13 +49,16 @@ class SmartPlug(object):
         :param password: Password to authenticate with the plug. Located on the plug.
         :param user: Username for the plug. Default is admin.
         :param use_legacy_protocol: Support legacy firmware versions. Default is False.
+        :param auth_interval: Number of seconds between re-authentications. Default is 10 seconds.
         """
         self.ip = ip
         self.url = "http://{}/HNAP1/".format(ip)
         self.user = user
         self.password = password
         self.use_legacy_protocol = use_legacy_protocol
-        self.authenticated = None
+        # Dict with authentication data {"key": PrivateKey, "cookie": Cookie, "authtime": time of authentication (epoch)}
+        self.auth = None
+        self.auth_interval = auth_interval
         if self.use_legacy_protocol:
             _LOGGER.info("Enabled support for legacy firmware.")
         self._error_report = False
@@ -126,15 +129,11 @@ class SmartPlug(object):
         :param recursive: True if first attempt failed and now attempting to re-authenticate prior
         :return: Text enclosed in responseElement brackets
         """
-        # Authenticate client
-        if self.authenticated is None:
-            self.authenticated = self.auth()
-        auth = self.authenticated
-        # If not legacy protocol, ensure auth() is called for every call
-        if not self.use_legacy_protocol:
-            self.authenticated = None
+        # Authenticate client if not authenticated or last authentication is too old
+        if (self.auth is None or (time.time() - self.auth["authtime"]) > self.auth_interval):
+            self.auth = self.authenticate()
 
-        if auth is None:
+        if self.auth is None:
             return None
         payload = self.requestBody(Action, params)
 
@@ -142,18 +141,18 @@ class SmartPlug(object):
         time_stamp = str(round(time.time() / 1e6))
 
         action_url = '"http://purenetworks.com/HNAP1/{}"'.format(Action)
-        AUTHKey = hmac.new(auth[0].encode(), (time_stamp + action_url).encode(), digestmod=hashlib.md5).hexdigest().upper() + " " + time_stamp
+        AUTHKey = hmac.new(self.auth["key"].encode(), (time_stamp + action_url).encode(), digestmod=hashlib.md5).hexdigest().upper() + " " + time_stamp
 
         headers = {'Content-Type': '"text/xml; charset=utf-8"',
                    'SOAPAction': '"http://purenetworks.com/HNAP1/{}"'.format(Action),
                    'HNAP_AUTH': '{}'.format(AUTHKey),
-                   'Cookie': 'uid={}'.format(auth[1])}
+                   'Cookie': 'uid={}'.format(self.auth["cookie"])}
 
         try:
             response = urlopen(Request(self.url, payload.encode(), headers))
         except (HTTPError, URLError):
-            # Try to re-authenticate once
-            self.authenticated = None
+            # Force re-authentication
+            self.auth = None
             # Recursive call to retry action
             if not recursive:
                 return_value = self.SOAPAction(Action, responseElement, params, True)
@@ -298,7 +297,7 @@ class SmartPlug(object):
         """Get the device state (i.e. ON or OFF)."""
         return self.state
 
-    def auth(self):
+    def authenticate(self):
         """Authenticate using the SOAP interface.
 
         Authentication is a two-step process. First a initial payload
@@ -371,7 +370,7 @@ class SmartPlug(object):
             return None
 
         self._error_report = False  # Reset error logging
-        return (PrivateKey, Cookie)
+        return {"key": PrivateKey, "cookie": Cookie, "authtime": time.time()}
 
     def initial_auth_payload(self):
         """Return the initial authentication payload."""
