@@ -150,7 +150,7 @@ class SmartPlug(object):
         try:
             response = urlopen(Request(self.url, payload.encode(), headers))
         except (HTTPError, URLError):
-            _LOGGER.warning("Failed to open url to {}".format(self.ip))
+            _LOGGER.warning("Failed to open url to %s", self.ip)
             # Invalidate authentication as well
             self.auth = None
             return None
@@ -162,11 +162,13 @@ class SmartPlug(object):
         try:
             value = root.find('.//{http://purenetworks.com/HNAP1/}%s' % (responseElement)).text
         except AttributeError:
-            _LOGGER.warning("Unable to find %s in response." % responseElement)
+            _LOGGER.warning("Unable to find %s in response.", responseElement)
+            _LOGGER.debug("Response: %s", repr(xmlData))
             return None
 
         if value is None:
-            _LOGGER.warning("Could not find %s in response." % responseElement)
+            _LOGGER.warning("Could not find %s in response.", responseElement)
+            _LOGGER.debug("Response: %s", repr(xmlData))
             return None
 
         return value
@@ -186,6 +188,7 @@ class SmartPlug(object):
         tries = 0
         while(response is None and tries <= self.retry_count):
             tries += 1
+            _LOGGER.debug("SOAPAction #%s %s", tries, Action)
             response = self.AuthAndSOAPAction(Action, responseElement, params)
 
         return response
@@ -195,7 +198,7 @@ class SmartPlug(object):
         try:
             response = urlopen(Request('http://{}/my_cgi.cgi'.format(self.ip), b'request=create_chklst'));
         except (HTTPError, URLError):
-            _LOGGER.warning("Failed to open url to {}".format(self.ip))
+            _LOGGER.warning("Failed to open url to %s", self.ip)
             return None
 
         lines = response.readlines()
@@ -284,7 +287,7 @@ class SmartPlug(object):
         elif response.lower() == 'false':
             return OFF
         else:
-            _LOGGER.warning("Unknown state %s returned" % str(response.lower()))
+            _LOGGER.warning("Unknown state %s returned", response)
             return 'unknown'
 
     @state.setter
@@ -319,6 +322,7 @@ class SmartPlug(object):
 
         See https://github.com/bikerp/dsp-w215-hnap/wiki/Authentication-process for more information.
         """
+        _LOGGER.info("Authenticating to %s as %s", self.url, self.user)
 
         payload = self.initial_auth_payload()
 
@@ -330,7 +334,7 @@ class SmartPlug(object):
         try:
             response = urlopen(Request(self.url, payload, headers))
         except URLError:
-            _LOGGER.warning('Unable to open a connection to dlink switch {}'.format(self.ip))
+            _LOGGER.warning('Unable to open a connection to dlink switch %s', self.ip)
             return None
         xmlData = response.read().decode()
         root = ET.fromstring(xmlData)
@@ -343,6 +347,7 @@ class SmartPlug(object):
         if (
                 ChallengeResponse == None or CookieResponse == None or PublickeyResponse == None):
             _LOGGER.warning("Failed to receive initial authentication from smartplug.")
+            _LOGGER.debug("Response: %s", repr(xmlData))
             return None
 
         Challenge = ChallengeResponse.text
@@ -367,7 +372,8 @@ class SmartPlug(object):
         login_status = root.find('.//{http://purenetworks.com/HNAP1/}LoginResult').text.lower()
 
         if login_status != "success":
-            _LOGGER.error("Failed to authenticate with SmartPlug {}".format(self.ip))
+            _LOGGER.error("Failed to authenticate with SmartPlug %s", self.ip)
+            _LOGGER.debug("Response: %s", repr(xmlData))
             return None
 
         return {"key": PrivateKey, "cookie": Cookie, "authtime": time.time()}
