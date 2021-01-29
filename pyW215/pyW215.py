@@ -322,7 +322,7 @@ class SmartPlug(object):
 
         See https://github.com/bikerp/dsp-w215-hnap/wiki/Authentication-process for more information.
         """
-        _LOGGER.info("Authenticating to %s as %s", self.url, self.user)
+        _LOGGER.debug("Authenticating to %s as %s", self.url, self.user)
 
         payload = self.initial_auth_payload()
 
