@@ -40,7 +40,7 @@ class SmartPlug(object):
     """
 
     def __init__(self, ip, password, user="admin",
-                 use_legacy_protocol=False, auth_interval=10):
+                 use_legacy_protocol=False, auth_interval=10, retry_count=1):
         """
         Create a new SmartPlug instance identified by the given URL and password.
 
@@ -50,6 +50,7 @@ class SmartPlug(object):
         :param user: Username for the plug. Default is admin.
         :param use_legacy_protocol: Support legacy firmware versions. Default is False.
         :param auth_interval: Number of seconds between re-authentications. Default is 10 seconds.
+        :param retry_count: Number of times to retry failed SOAP call before giving up. Default is 1.
         """
         self.ip = ip
         self.url = "http://{}/HNAP1/".format(ip)
@@ -59,9 +60,9 @@ class SmartPlug(object):
         # Dict with authentication data {"key": PrivateKey, "cookie": Cookie, "authtime": time of authentication (epoch)}
         self.auth = None
         self.auth_interval = auth_interval
+        self.retry_count = retry_count
         if self.use_legacy_protocol:
             _LOGGER.info("Enabled support for legacy firmware.")
-        self._error_report = False
         self.model_name = self.SOAPAction(Action="GetDeviceSettings", responseElement="ModelName", params="")
 
     def moduleParameters(self, module):
@@ -116,17 +117,15 @@ class SmartPlug(object):
         </soap:Envelope>
                '''.format(Action, params, Action)
 
-    def SOAPAction(self, Action, responseElement, params="", recursive=False):
-        """Generate the SOAP action call.
+    def AuthAndSOAPAction(self, Action, responseElement, params=""):
+        """Authenticate as needed and send the SOAP action call.
 
         :type Action: str
         :type responseElement: str
         :type params: str
-        :type recursive: bool
         :param Action: The action to perform on the device
         :param responseElement: The XML element that is returned upon success
         :param params: Any additional parameters required for performing request (i.e. RadioID, moduleID, ect)
-        :param recursive: True if first attempt failed and now attempting to re-authenticate prior
         :return: Text enclosed in responseElement brackets
         """
         # Authenticate client if not authenticated or last authentication is too old
@@ -151,17 +150,10 @@ class SmartPlug(object):
         try:
             response = urlopen(Request(self.url, payload.encode(), headers))
         except (HTTPError, URLError):
-            # Force re-authentication
+            _LOGGER.warning("Failed to open url to {}".format(self.ip))
+            # Invalidate authentication as well
             self.auth = None
-            # Recursive call to retry action
-            if not recursive:
-                return_value = self.SOAPAction(Action, responseElement, params, True)
-            if recursive or return_value is None:
-                _LOGGER.warning("Failed to open url to {}".format(self.ip))
-                self._error_report = True
-                return None
-            else:
-                return return_value
+            return None
 
         xmlData = response.read().decode()
         root = ET.fromstring(xmlData)
@@ -173,13 +165,30 @@ class SmartPlug(object):
             _LOGGER.warning("Unable to find %s in response." % responseElement)
             return None
 
-        if value is None and self._error_report is False:
+        if value is None:
             _LOGGER.warning("Could not find %s in response." % responseElement)
-            self._error_report = True
             return None
 
-        self._error_report = False
         return value
+
+    def SOAPAction(self, Action, responseElement, params=""):
+        """Generate the SOAP action call. Retry on error as configured.
+
+        :type Action: str
+        :type responseElement: str
+        :type params: str
+        :param Action: The action to perform on the device
+        :param responseElement: The XML element that is returned upon success
+        :param params: Any additional parameters required for performing request (i.e. RadioID, moduleID, ect)
+        :return: Text enclosed in responseElement brackets
+        """
+        response = None
+        tries = 0
+        while(response is None and tries <= self.retry_count):
+            tries += 1
+            response = self.AuthAndSOAPAction(Action, responseElement, params)
+
+        return response
 
     def fetchMyCgi(self):
         """Fetches statistics from my_cgi.cgi"""
@@ -187,7 +196,6 @@ class SmartPlug(object):
             response = urlopen(Request('http://{}/my_cgi.cgi'.format(self.ip), b'request=create_chklst'));
         except (HTTPError, URLError):
             _LOGGER.warning("Failed to open url to {}".format(self.ip))
-            self._error_report = True
             return None
 
         lines = response.readlines()
@@ -322,9 +330,7 @@ class SmartPlug(object):
         try:
             response = urlopen(Request(self.url, payload, headers))
         except URLError:
-            if self._error_report is False:
-                _LOGGER.warning('Unable to open a connection to dlink switch {}'.format(self.ip))
-                self._error_report = True
+            _LOGGER.warning('Unable to open a connection to dlink switch {}'.format(self.ip))
             return None
         xmlData = response.read().decode()
         root = ET.fromstring(xmlData)
@@ -335,12 +341,8 @@ class SmartPlug(object):
         PublickeyResponse = root.find('.//{http://purenetworks.com/HNAP1/}PublicKey')
 
         if (
-                ChallengeResponse == None or CookieResponse == None or PublickeyResponse == None) and self._error_report is False:
+                ChallengeResponse == None or CookieResponse == None or PublickeyResponse == None):
             _LOGGER.warning("Failed to receive initial authentication from smartplug.")
-            self._error_report = True
-            return None
-
-        if self._error_report is True:
             return None
 
         Challenge = ChallengeResponse.text
@@ -364,12 +366,10 @@ class SmartPlug(object):
         # Find responses
         login_status = root.find('.//{http://purenetworks.com/HNAP1/}LoginResult').text.lower()
 
-        if login_status != "success" and self._error_report is False:
+        if login_status != "success":
             _LOGGER.error("Failed to authenticate with SmartPlug {}".format(self.ip))
-            self._error_report = True
             return None
 
-        self._error_report = False  # Reset error logging
         return {"key": PrivateKey, "cookie": Cookie, "authtime": time.time()}
 
     def initial_auth_payload(self):
