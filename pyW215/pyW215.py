@@ -17,7 +17,6 @@ _LOGGER = logging.getLogger(__name__)
 ON = 'ON'
 OFF = 'OFF'
 
-
 class SmartPlug(object):
     """
     Class to access:
@@ -84,7 +83,7 @@ class SmartPlug(object):
                       <OPStatus>{}</OPStatus><Controller>1</Controller>'''.format(self.moduleParameters(module), status)
         else:
             return '''{}<NickName>Socket 1</NickName><Description>Socket 1</Description>
-                      <OPStatus>{}</OPStatus>'''.format(self.moduleParameters(module), status)
+                      <OPStatus>{}</OPStatus><Controller>1</Controller>'''.format(self.moduleParameters(module), status)
 
     def radioParameters(self, radio):
         """Returns RadioID as XML.
@@ -131,8 +130,8 @@ class SmartPlug(object):
             self.authenticated = self.auth()
         auth = self.authenticated
         # If not legacy protocol, ensure auth() is called for every call
-        if not self.use_legacy_protocol:
-            self.authenticated = None
+        #if not self.use_legacy_protocol:
+        #    self.authenticated = None
 
         if auth is None:
             return None
@@ -176,6 +175,11 @@ class SmartPlug(object):
 
         if value is None and self._error_report is False:
             _LOGGER.warning("Could not find %s in response." % responseElement)
+            self._error_report = True
+            return None
+        
+        if value == 'ERROR' and self._error_report is False:
+            _LOGGER.warning("Value of response element %s was \"ERROR\"." % responseElement)
             self._error_report = True
             return None
 
@@ -335,8 +339,10 @@ class SmartPlug(object):
         CookieResponse = root.find('.//{http://purenetworks.com/HNAP1/}Cookie')
         PublickeyResponse = root.find('.//{http://purenetworks.com/HNAP1/}PublicKey')
 
-        if (
-                ChallengeResponse == None or CookieResponse == None or PublickeyResponse == None) and self._error_report is False:
+        if (ChallengeResponse == None or CookieResponse == None or PublickeyResponse == None) and self._error_report is False:
+            print( 'payload\n', payload.decode(), '\n' )
+            print( 'headers\n', headers, '\n' )
+            print( 'xmlData\n', xmlData, '\n' )
             _LOGGER.warning("Failed to receive initial authentication from smartplug.")
             self._error_report = True
             return None
@@ -352,11 +358,16 @@ class SmartPlug(object):
         PrivateKey = hmac.new((Publickey + self.password).encode(), (Challenge).encode(), digestmod=hashlib.md5).hexdigest().upper()
         login_pwd = hmac.new(PrivateKey.encode(), Challenge.encode(), digestmod=hashlib.md5).hexdigest().upper()
 
+        time_stamp = str(round(time.time() / 1e6))
+        action_url = '"http://purenetworks.com/HNAP1/Login"'
+        AUTHKey = hmac.new(PrivateKey.encode(), (time_stamp + action_url).encode(), digestmod=hashlib.md5).hexdigest().upper() + " " + time_stamp
+
         response_payload = self.auth_payload(login_pwd)
+
         # Build response to initial request
         headers = {'Content-Type': '"text/xml; charset=utf-8"',
                    'SOAPAction': '"http://purenetworks.com/HNAP1/Login"',
-                   'HNAP_AUTH': '"{}"'.format(PrivateKey),
+                   'HNAP_AUTH': '"{}"'.format(AUTHKey),
                    'Cookie': 'uid={}'.format(Cookie)}
         response = urlopen(Request(self.url, response_payload, headers))
         xmlData = response.read().decode()
@@ -376,18 +387,17 @@ class SmartPlug(object):
     def initial_auth_payload(self):
         """Return the initial authentication payload."""
 
-        return b'''<?xml version="1.0" encoding="utf-8"?>
-        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-        <soap:Body>
+        return '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+    <soap:Body>
         <Login xmlns="http://purenetworks.com/HNAP1/">
-        <Action>request</Action>
-        <Username>admin</Username>
-        <LoginPassword/>
-        <Captcha/>
+            <Action>request</Action>
+            <Username>{}</Username>
+            <LoginPassword></LoginPassword>
+            <Captcha></Captcha>
         </Login>
-        </soap:Body>
-        </soap:Envelope>
-        '''
+    </soap:Body>
+</soap:Envelope>'''.format(self.user).encode()
 
     def auth_payload(self, login_pwd):
         """Generate a new payload containing generated hash information.
@@ -397,16 +407,15 @@ class SmartPlug(object):
         """
 
         payload = '''<?xml version="1.0" encoding="utf-8"?>
-        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-        <soap:Body>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+    <soap:Body>
         <Login xmlns="http://purenetworks.com/HNAP1/">
-        <Action>login</Action>
-        <Username>{}</Username>
-        <LoginPassword>{}</LoginPassword>
-        <Captcha/>
+            <Action>login</Action>
+            <Username>{}</Username>
+            <LoginPassword>{}</LoginPassword>
+            <Captcha></Captcha>
         </Login>
-        </soap:Body>
-        </soap:Envelope>
-        '''.format(self.user, login_pwd)
+    </soap:Body>
+</soap:Envelope>'''.format(self.user, login_pwd)
 
         return payload.encode()
