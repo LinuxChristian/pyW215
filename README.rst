@@ -37,6 +37,10 @@ Usage
 
 Note: You need to know the IP and password of your device. The password is written on the side.
 
+Contributions
+=========================
+I personally no longer use my W215 but contributions are always welcome. **If you do submit a PR please ping @LinuxChristian.** If I don't respond within a few days just ping me again.
+
 Working firmware versions
 =========================
 
@@ -59,3 +63,8 @@ Need support for W115 or W245?
 Checkout this library, https://github.com/jonassjoh/dspW245
 
 .. _dsp-w215-hnap: https://github.com/bikerp/dsp-w215-hnap
+
+
+Need support for W218
+-------------------------------
+DSP-W218 uses `a completly different protocol <https://github.com/LinuxChristian/pyW215/issues/38#issuecomment-980794946>`_ compare to earlier versions. There is no roadmap to add support for W218 but PR's are always welcome.
