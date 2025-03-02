@@ -341,9 +341,6 @@ class SmartPlug(object):
             self._error_report = True
             return None
 
-        if self._error_report is True:
-            return None
-
         Challenge = ChallengeResponse.text
         Cookie = CookieResponse.text
         Publickey = PublickeyResponse.text
